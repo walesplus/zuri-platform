@@ -1,0 +1,53 @@
+name: Platform CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/platform
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout platform repository
+        uses: actions/checkout@v4
+
+      - name: Checkout backend repository
+        uses: actions/checkout@v4
+        with:
+          repository: walesplus/zuriapp-backend
+          ref: feature/backend
+          path: zuriapp-backend
+
+      - name: Checkout frontend repository
+        uses: actions/checkout@v4
+        with:
+          repository: walesplus/zuriapp-frontend
+          ref: feature/frontend
+          path: zuriapp-frontend
+
+      - name: Prepare platform directory
+        run: |
+          mkdir zuri-platform
+          cp docker-compose.yml zuri-platform/docker-compose.yml
+
+      - name: Validate Docker Compose
+        working-directory: zuri-platform
+        run: docker compose config
+
+      - name: Build application stack
+        working-directory: zuri-platform
+        run: docker compose build
+
+      - name: Start application stack
+        working-directory: zuri-platform
+        run: docker compose up -d
+
+      - name: Show running containers
+        working-directory: zuri-platform
+        run: docker compose ps
