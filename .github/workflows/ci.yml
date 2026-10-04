@@ -51,3 +51,14 @@ jobs:
       - name: Show running containers
         working-directory: zuri-platform
         run: docker compose ps
+
+      - name: Wait for services
+        run: sleep 10
+
+      - name: Test backend health
+        run: |
+          curl --fail http://localhost:5001/api/store
+
+      - name: Test frontend health
+        run: |
+          curl --fail http://localhost:3000
