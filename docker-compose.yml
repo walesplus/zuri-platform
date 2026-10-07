@@ -18,7 +18,7 @@ services:
       context: ../zuriapp-frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:5001
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5001}
     container_name: zuri-frontend-compose
     ports:
       - "3000:80"
