@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: zuri-frontend-config
+
+data:
+  STORE_NAME: "Zuri Store"

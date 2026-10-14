@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: zuri-backend
+  labels:
+    app: zuri-backend
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: zuri-backend
+
+  template:
+    metadata:
+      labels:
+        app: zuri-backend
+
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/walesplus/zuriapp-backend:1.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: PORT
+              value: "5000"
+
+            - name: STORE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: zuri-backend-config
+                  key: STORE_NAME
+
+            - name: API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zuri-backend-secret
+                  key: API_SECRET_KEY
