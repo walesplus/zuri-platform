@@ -3,6 +3,10 @@ kind: Service
 
 metadata:
   name: zuri-backend-service
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "5000"
 
 spec:
   type: ClusterIP
