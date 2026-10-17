@@ -90,7 +90,7 @@ jobs:
       - name: Validate Terraform configuration
         run: terraform validate
 
-    security-scan:
+  security-scan:
     name: Scan Repository Security
     runs-on: ubuntu-latest
 
