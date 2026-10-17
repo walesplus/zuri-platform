@@ -89,3 +89,20 @@ jobs:
 
       - name: Validate Terraform configuration
         run: terraform validate
+
+  security-scan:
+    name: Scan Repository Security
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy security scanner
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          exit-code: '0'
