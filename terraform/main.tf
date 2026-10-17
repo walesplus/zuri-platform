@@ -185,6 +185,10 @@ resource "aws_instance" "zuri_server" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.zuri_key.key_name
 
+  metadata_options {
+    http_tokens = "required"
+  }
+
   user_data = file("${path.module}/user-data.sh")
 
   tags = {
