@@ -1,3 +1,4 @@
+
 name: Platform CI
 
 on:
@@ -5,12 +6,14 @@ on:
     branches:
       - main
       - feature/platform
+
   pull_request:
     branches:
       - main
 
 jobs:
   validate:
+    name: Validate and Test Application
     runs-on: ubuntu-latest
 
     steps:
@@ -62,3 +65,27 @@ jobs:
       - name: Test frontend health
         run: |
           curl --fail http://localhost:3000
+
+  terraform-validate:
+    name: Validate Terraform Infrastructure
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: terraform
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Initialize Terraform
+        run: terraform init -backend=false
+
+      - name: Check Terraform formatting
+        run: terraform fmt -check -recursive
+
+      - name: Validate Terraform configuration
+        run: terraform validate
