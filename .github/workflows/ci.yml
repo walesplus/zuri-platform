@@ -5,7 +5,7 @@ on:
   push:
     branches:
       - main
-      - feature/platform
+      - 'feature/**'
 
   pull_request:
     branches:
@@ -109,5 +109,5 @@ jobs:
             aquasec/trivy:0.65.0 fs \
             --scanners vuln,misconfig,secret \
             --severity HIGH,CRITICAL \
-            --exit-code 0 \
+            --exit-code 1 \
             /workspace
