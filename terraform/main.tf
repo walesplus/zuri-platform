@@ -36,7 +36,7 @@ resource "aws_vpc" "main" {
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidr
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   tags = {
     Name    = "${var.project_name}-public-subnet"
@@ -87,7 +87,12 @@ resource "aws_route_table_association" "public" {
 # -------------------------
 # Security Group
 # -------------------------
-
+# Temporary capstone exception: outbound internet access is required
+# for Amazon Linux package updates and Docker/Git installation.
+# Risk: all outbound protocols and destinations remain permitted.
+# Remediation: use controlled outbound HTTPS and approved endpoints.
+# Review before 2026-11-30.
+#trivy:ignore:AWS-0104:exp:2026-11-30
 resource "aws_security_group" "zuri_sg" {
   name        = "${var.project_name}-sg"
   description = "Security group for the Zuri application"
@@ -184,6 +189,11 @@ resource "aws_instance" "zuri_server" {
   vpc_security_group_ids      = [aws_security_group.zuri_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.zuri_key.key_name
+
+  root_block_device {
+    encrypted   = true
+    volume_type = "gp3"
+  }
 
   metadata_options {
     http_tokens = "required"
