@@ -1,28 +1,26 @@
-# Grafana database backups
-monitoring/grafana/backups/
+# Terraform local directory
+terraform/.terraform/
 
-# Terraform provider downloads
-**/.terraform/
+# Terraform state
+terraform/*.tfstate
+terraform/*.tfstate.*
 
-# Terraform state files
-*.tfstate
-*.tfstate.*
-*.tfplan
+# Terraform plan files
+terraform/*.tfplan
 
-# Terraform variable files (may contain secrets)
-*.tfvars
-*.tfvars.json
+# Terraform variable files that may contain secrets
+terraform/*.tfvars
 
-# Terraform crash logs
-crash.log
-crash.*.log
-
-# Terraform override files
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-
-# Private SSH keys for Zuri
+# Crash logs
+terraform/crash.log
+terraform/crash.*.log
+# SSH private/public key files
 terraform/zuri-ec2-key
-terraform/*.pem
+terraform/zuri-ec2-key.pub
+.env
+
+# Local configuration backups
+*.backup
+
+# Grafana local database and backups
+monitoring/grafana/backups/

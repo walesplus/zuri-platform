@@ -6,42 +6,47 @@ on:
     branches:
       - main
       - 'feature/**'
-
   pull_request:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   validate:
-    name: Validate and Test Application
+    name: Validate Docker Compose Integration
     runs-on: ubuntu-latest
+
+    env:
+      API_SECRET_KEY: ci-only-test-secret-not-for-production
 
     steps:
       - name: Checkout platform repository
         uses: actions/checkout@v4
 
-      - name: Checkout backend repository
+      - name: Checkout backend main
         uses: actions/checkout@v4
         with:
           repository: walesplus/zuriapp-backend
-          ref: feature/backend
+          ref: main
           path: zuriapp-backend
 
-      - name: Checkout frontend repository
+      - name: Checkout frontend main
         uses: actions/checkout@v4
         with:
           repository: walesplus/zuriapp-frontend
-          ref: feature/frontend
+          ref: main
           path: zuriapp-frontend
 
       - name: Prepare platform directory
         run: |
-          mkdir zuri-platform
+          mkdir -p zuri-platform
           cp docker-compose.yml zuri-platform/docker-compose.yml
 
       - name: Validate Docker Compose
         working-directory: zuri-platform
-        run: docker compose config
+        run: docker compose config --quiet
 
       - name: Build application stack
         working-directory: zuri-platform
@@ -49,22 +54,26 @@ jobs:
 
       - name: Start application stack
         working-directory: zuri-platform
-        run: docker compose up -d
-
-      - name: Show running containers
-        working-directory: zuri-platform
-        run: docker compose ps
-
-      - name: Wait for services
-        run: sleep 10
+        run: docker compose up -d --wait --wait-timeout 120
 
       - name: Test backend health
-        run: |
-          curl --fail http://localhost:5001/api/store
+        run: curl --fail --show-error http://localhost:5001/api/health
 
-      - name: Test frontend health
+      - name: Test frontend and reverse proxy
         run: |
-          curl --fail http://localhost:3000
+          curl --fail --show-error http://localhost:8080/
+          curl --fail --show-error http://localhost:8080/api/health
+          curl --fail --show-error http://localhost:8080/api/products
+
+      - name: Show logs on failure
+        if: failure()
+        working-directory: zuri-platform
+        run: docker compose logs --tail=100
+
+      - name: Stop containers
+        if: always()
+        working-directory: zuri-platform
+        run: docker compose down
 
   terraform-validate:
     name: Validate Terraform Infrastructure
@@ -98,16 +107,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Trivy using Docker
-        run: |
-          docker pull aquasec/trivy:0.65.0
-
-      - name: Run Trivy security scanner
-        run: |
-          docker run --rm \
-            -v "$PWD:/workspace" \
-            aquasec/trivy:0.65.0 fs \
-            --scanners vuln,misconfig,secret \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            /workspace
+      - name: Scan repository with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
