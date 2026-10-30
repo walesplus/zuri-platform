@@ -110,7 +110,7 @@
             "uid": "ag167eknyfjswc"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_errors_total[5m]))",
+          "expr": "sum(rate(http_errors_total{namespace=\"zuri\",service=\"zuri-backend-service\"}[5m]))",
           "hide": false,
           "instant": false,
           "legendFormat": "__auto",
