@@ -1,0 +1,27 @@
+
+server:
+  persistentVolume:
+    enabled: false
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  scrapeConfigs:
+    zuri-backend:
+      job_name: zuri-backend
+      metrics_path: /metrics
+      scrape_interval: 15s
+      static_configs:
+        - targets:
+            - zuri-backend-service.zuri.svc.cluster.local:5000
+
+alertmanager:
+  enabled: false
+
+prometheus-pushgateway:
+  enabled: false

@@ -1,14 +1,48 @@
+
+# Grafana startup health check
+startupProbe:
+  httpGet:
+    path: /api/health
+    port: grafana
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 30
+
+# Grafana readiness check
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: grafana
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 12
+
+# Grafana liveness check
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: grafana
+  initialDelaySeconds: 60
+  periodSeconds: 15
+  timeoutSeconds: 10
+  failureThreshold: 10
+
+# Local development storage
 persistence:
   enabled: false
 
+# Resource allocation
 resources:
   requests:
-    cpu: 50m
-    memory: 128Mi
-  limits:
-    cpu: 300m
+    cpu: 100m
     memory: 256Mi
+  limits:
+    cpu: 750m
+    memory: 768Mi
 
+# Prometheus datasource
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -21,11 +55,12 @@ datasources:
         isDefault: true
         editable: true
 
+# Dashboard provisioning
 dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
     providers:
-      - name: Zuri Dashboards
+      - name: zuri
         orgId: 1
         folder: Zuri Monitoring
         type: file
@@ -34,5 +69,6 @@ dashboardProviders:
         options:
           path: /var/lib/grafana/dashboards/zuri
 
+# Existing Kubernetes dashboard ConfigMap
 dashboardsConfigMaps:
   zuri: zuri-grafana-dashboards
