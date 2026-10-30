@@ -110,7 +110,7 @@
             "uid": "ag167eknyfjswc"
           },
           "editorMode": "code",
-          "expr": "sum(rate(http_request_duration_seconds_sum[5m]))\r\n/\r\nsum(rate(http_request_duration_seconds_count[5m]))",
+          "expr": "sum(rate(http_request_duration_seconds_sum{namespace=\"zuri\",service=\"zuri-backend-service\"}[5m])) / sum(rate(http_request_duration_seconds_count{namespace=\"zuri\",service=\"zuri-backend-service\"}[5m]))",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"

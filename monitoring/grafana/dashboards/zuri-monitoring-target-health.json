@@ -110,7 +110,7 @@
             "uid": "ag167eknyfjswc"
           },
           "editorMode": "code",
-          "expr": "up",
+          "expr": "up{namespace=\"zuri\",service=\"zuri-backend-service\"}",
           "legendFormat": "__auto",
           "range": true,
           "refId": "A"
