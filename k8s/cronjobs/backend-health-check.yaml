@@ -1,0 +1,77 @@
+
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: zuri-backend-health-check
+  namespace: zuri
+  labels:
+    app: zuri-backend-health-check
+
+spec:
+  schedule: "*/5 * * * *"
+  timeZone: "Etc/UTC"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 90
+
+      template:
+        metadata:
+          labels:
+            app: zuri-backend-health-check
+
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+
+          containers:
+            - name: health-check
+              image: curlimages/curl:8.12.1
+              imagePullPolicy: IfNotPresent
+
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  echo "Checking Zuri backend health..."
+
+                  curl \
+                    --fail \
+                    --silent \
+                    --show-error \
+                    --connect-timeout 5 \
+                    --max-time 15 \
+                    --retry 2 \
+                    --retry-delay 2 \
+                    http://zuri-backend-service.zuri.svc.cluster.local:5000/api/health
+
+                  echo ""
+                  echo "Zuri backend health check passed."
+
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "16Mi"
+                limits:
+                  cpu: "100m"
+                  memory: "64Mi"
