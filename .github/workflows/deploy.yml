@@ -56,6 +56,7 @@ jobs:
         shell: bash
         run: |
           kubectl get nodes
+
           kubectl -n kube-system rollout status \
             deployment/coredns --timeout=120s
 
@@ -106,6 +107,38 @@ jobs:
           kubectl -n zuri rollout status \
             deployment/zuri-frontend --timeout=180s
 
+      - name: Deploy backend health-check CronJob
+        shell: bash
+        run: |
+          kubectl -n zuri apply \
+            -f k8s/cronjobs/backend-health-check.yaml
+
+          kubectl -n zuri get cronjob zuri-backend-health-check
+
+      - name: Verify CronJob execution
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl -n zuri create job \
+            --from=cronjob/zuri-backend-health-check \
+            zuri-health-cd-test
+
+          if ! kubectl -n zuri wait \
+            --for=condition=complete \
+            job/zuri-health-cd-test \
+            --timeout=120s; then
+
+            kubectl -n zuri describe job zuri-health-cd-test
+
+            kubectl -n zuri logs job/zuri-health-cd-test \
+              --all-containers=true --tail=100 || true
+
+            exit 1
+          fi
+
+          kubectl -n zuri logs job/zuri-health-cd-test
+
       - name: Verify application through frontend service
         shell: bash
         run: |
@@ -143,7 +176,7 @@ jobs:
       - name: Show deployment status
         if: always()
         run: |
-          kubectl -n zuri get deployments,pods,services \
+          kubectl -n zuri get deployments,pods,services,cronjobs,jobs \
             || true
 
           kubectl -n zuri get events \
@@ -158,3 +191,6 @@ jobs:
 
           kubectl -n zuri logs \
             deployment/zuri-frontend --tail=50 || true
+
+          kubectl -n zuri logs \
+            job/zuri-health-cd-test --tail=50 || true
