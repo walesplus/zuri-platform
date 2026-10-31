@@ -1,0 +1,135 @@
+
+name: Zuri Kubernetes CD
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zuri-kubernetes-cd
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and Verify Zuri
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout platform repository
+        uses: actions/checkout@v4
+
+      - name: Create temporary Kubernetes cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: zuri-cd
+          wait: 120s
+
+      - name: Verify cluster DNS configuration
+        shell: bash
+        run: |
+          kubectl get nodes
+          kubectl -n kube-system rollout status \
+            deployment/coredns --timeout=120s
+
+          DNS_IP=$(kubectl -n kube-system get service kube-dns \
+            -o jsonpath='{.spec.clusterIP}')
+
+          echo "Cluster DNS service: $DNS_IP"
+
+          if [ "$DNS_IP" != "10.96.0.10" ]; then
+            echo "::error::Frontend Nginx config expects DNS 10.96.0.10"
+            exit 1
+          fi
+
+      - name: Create namespace and test secret
+        shell: bash
+        run: |
+          kubectl create namespace zuri
+
+          API_SECRET_KEY=$(openssl rand -hex 32)
+
+          kubectl -n zuri create secret generic zuri-backend-secret \
+            --from-literal="API_SECRET_KEY=$API_SECRET_KEY"
+
+          unset API_SECRET_KEY
+
+      - name: Apply Kubernetes configuration
+        shell: bash
+        run: |
+          kubectl -n zuri apply -f k8s/backend/configmap.yaml
+          kubectl -n zuri apply -f k8s/frontend/configmap.yaml
+
+          kubectl -n zuri apply -f k8s/backend/service.yaml
+          kubectl -n zuri apply -f k8s/frontend/service.yaml
+
+      - name: Deploy backend
+        shell: bash
+        run: |
+          kubectl -n zuri apply -f k8s/backend/deployment.yaml
+
+          kubectl -n zuri rollout status \
+            deployment/zuri-backend --timeout=180s
+
+      - name: Deploy frontend
+        shell: bash
+        run: |
+          kubectl -n zuri apply -f k8s/frontend/deployment.yaml
+
+          kubectl -n zuri rollout status \
+            deployment/zuri-frontend --timeout=180s
+
+      - name: Verify application through frontend service
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          kubectl -n zuri port-forward \
+            service/zuri-frontend-service 8080:80 \
+            > /tmp/zuri-port-forward.log 2>&1 &
+
+          PF_PID=$!
+          trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then
+              break
+            fi
+
+            if [ "$i" -eq 30 ]; then
+              cat /tmp/zuri-port-forward.log
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          curl --fail --show-error \
+            http://127.0.0.1:8080/
+
+          curl --fail --show-error \
+            http://127.0.0.1:8080/api/store
+
+          curl --fail --show-error \
+            http://127.0.0.1:8080/api/products
+
+      - name: Show deployment status
+        if: always()
+        run: |
+          kubectl -n zuri get deployments,pods,services \
+            || true
+
+          kubectl -n zuri get events \
+            --sort-by=.lastTimestamp \
+            || true
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          kubectl -n zuri logs \
+            deployment/zuri-backend --tail=50 || true
+
+          kubectl -n zuri logs \
+            deployment/zuri-frontend --tail=50 || true
